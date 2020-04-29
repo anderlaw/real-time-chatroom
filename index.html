@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Room</title>
+    <style>
+      .message-box {
+        padding: 10px;
+        font-size: 18px;
+      }
+      .message-box .user {
+        color: #111;
+      }
+      .message-box .message {
+        color: green;
+        font-style: italic;
+      }
+      #message-form {
+        padding: 10px;
+      }
+      #message-form input {
+        font-size: 16px;
+        padding: 10px 14px;
+      }
+      #message-form button {
+        font-size: 16px;
+        padding: 8px 10px;
+      }
+      .modal-box {
+        position: fixed;
+        /* view width */
+        width: 100vw;
+        /* vh: view height */
+        height: 100vh;
+        top: 0;
+        left: 0;
+        background-color: rgba(0, 0, 0, 0.3);
+      }
+      #user-form {
+        background-color: #fff;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 20px 30px;
+        border-radius: 7px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="message-box">
+      
+    </div>
+    <form action="" id="message-form">
+      <input type="text" placeholder="type message here" />
+      <button>send</button>
+    </form>
+    <div class="modal-box">
+      <form action="" id="user-form">
+        <label for="user-input">your nickname</label>
+        <input
+          type="text"
+          id="user-input"
+          placeholder="please enter your nickname"
+        />
+        <button>sure</button>
+      </form>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      function initSocket(callback) {
+        document.querySelector("#user-form").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const username = e.target.querySelector("input").value;
+          console.log(username);
+          //close modal box
+          document.querySelector('.modal-box').style.display = 'none'
+          
+          
+          //connect socket service
+          const socket = io();
+
+          callback(socket,username)
+          updateView({username:'You',message:'Join the room'})
+        });
+      }
+      initSocket((socket,username)=>{
+        socket.emit('create_username',username)
+
+        //other people join the room
+        socket.on('create_username',username=>{
+          updateView({username:username,message:'join the room'})
+        })
+
+        //some people leave the room
+        socket.on('user_leave',username=>{
+          updateView({
+            username:username,
+            message:'leave the room'
+          })
+        })
+        document.querySelector('#message-form').addEventListener('submit',e=>{
+          e.preventDefault()
+          const message = e.target.querySelector('input').value.trim();
+
+          if(message){
+            updateView({username:'You',message:message})
+            //send message to server
+            socket.emit('send_message',message)
+            e.target.querySelector('input').value = ''
+          }
+        })
+        socket.on('send_message',({username,message})=>{
+          updateView({
+            username,
+            message
+          })
+        })
+      })
+      function updateView({ username,message }){
+        document.querySelector('.message-box').innerHTML += `
+          <div class="message-item">
+            <span class="user">${username}</span>
+            <span class="message">${message}</span>
+          </div>
+        `
+      }
+    </script>
+  </body>
+</html>
